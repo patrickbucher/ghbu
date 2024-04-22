@@ -1,5 +1,6 @@
 use clap::Parser;
-use reqwest::blocking;
+use reqwest::blocking::Client;
+use serde_json::Value;
 use std::{env, process};
 
 const TOKEN_ENVVAR: &str = "GITHUB_TOKEN";
@@ -38,9 +39,41 @@ fn main() {
     println!("token: {}, backup to: {}", github_token, args.to);
 
     // do a request
-    let url = "https://www.paedubucher.ch/index.html";
-    match blocking::get(url) {
-        Ok(body) => println!("{:?}", body),
-        Err(err) => println!("{err}"),
+    let mut ssh_urls: Vec<String> = Vec::new();
+    let client = Client::new();
+    let url = "https://api.github.com/user/repos";
+    let mut page = 1;
+    while page < 10 {
+        let req = client
+            .get(url)
+            .bearer_auth(&github_token)
+            .header("Accept", "application/json")
+            .header("User-Agent", "reqwest")
+            .query(&[
+                ("affiliation", "owner"),
+                ("per_page", "20"),
+                ("page", &page.to_string()),
+            ]);
+        match req.send() {
+            Ok(res) => {
+                let payload = res.json::<serde_json::Value>();
+                if let Ok(Value::Array(arr)) = payload {
+                    if arr.len() < 1 {
+                        break;
+                    }
+                    for e in arr {
+                        if let Some(Value::String(ssh_url)) = e.get("ssh_url") {
+                            ssh_urls.push(ssh_url.to_string());
+                        }
+                    }
+                }
+            }
+            Err(err) => {
+                println!("{err}");
+                break;
+            }
+        }
+        page += 1;
     }
+    println!("backup {:?} repos", ssh_urls.len());
 }
