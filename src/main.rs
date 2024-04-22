@@ -43,7 +43,7 @@ fn main() {
     let client = Client::new();
     let url = "https://api.github.com/user/repos";
     let mut page = 1;
-    while page < 10 {
+    loop {
         let req = client
             .get(url)
             .bearer_auth(&github_token)
@@ -75,5 +75,7 @@ fn main() {
         }
         page += 1;
     }
-    println!("backup {:?} repos", ssh_urls.len());
+    for ssh_url in ssh_urls {
+        println!("{ssh_url}");
+    }
 }
