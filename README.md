@@ -11,6 +11,7 @@ Intended usage (backup the repositories of accounts `foo` and `bar` to
 
 - [reqwest](https://crates.io/crates/reqwest): request repositories from GitHub API
 - [git2](https://docs.rs/git2/latest/git2/): clone and pull repositories
+- [clap](https://crates.io/crates/clap): parse command line arguments
 
 ## Open Points
 
