@@ -20,27 +20,21 @@ pub fn fetch_repo_ssh_urls_by_name(github_token: String) -> HashMap<String, Stri
             ]);
         match req.send() {
             Ok(res) => {
-                let payload = res.json::<serde_json::Value>();
-                match payload {
-                    Ok(payload) => match payload {
-                        Value::Array(arr) => {
-                            if arr.len() < 1 {
-                                break;
+                if let Ok(Value::Array(arr)) = res.json::<serde_json::Value>() {
+                    if arr.len() < 1 {
+                        break;
+                    }
+                    for repo in arr {
+                        match (repo.get("name"), repo.get("ssh_url")) {
+                            (Some(name), Some(ssh_url)) => {
+                                ssh_urls.insert(name.to_string(), ssh_url.to_string());
                             }
-                            for repo in arr {
-                                if let (Some(Value::String(name)), Some(Value::String(ssh_url))) =
-                                    (repo.get("name"), repo.get("ssh_url"))
-                                {
-                                    ssh_urls.insert(name.to_string(), ssh_url.to_string());
-                                }
-                            }
+                            _ => eprintln!("skipping repo (missing name/ssh_url)"),
                         }
-                        _ => eprintln!("mismatch"),
-                    },
-                    _ => eprintln!("oh noes"),
+                    }
                 }
             }
-            _ => break,
+            Err(e) => eprintln!("request failed: {:?}", e),
         }
         page += 1;
     }
