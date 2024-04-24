@@ -44,7 +44,7 @@ pub fn fetch_repo_ssh_urls_by_name(github_token: String) -> HashMap<String, Stri
                     }
                     for repo in arr {
                         match (repo.get("name"), repo.get("ssh_url")) {
-                            (Some(name), Some(ssh_url)) => {
+                            (Some(Value::String(name)), Some(Value::String(ssh_url))) => {
                                 ssh_urls.insert(name.to_string(), ssh_url.to_string());
                             }
                             _ => eprintln!("skipping repo (missing name/ssh_url)"),
