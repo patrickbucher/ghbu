@@ -25,6 +25,11 @@ fn main() {
         }
     };
     let args = Args::parse();
+    println!("clone to: {}", args.to);
+    if let Err(e) = ghbu::prepare_clone_dir(args.to) {
+        eprintln!("{e}");
+        process::exit(1);
+    }
 
     for (name, url) in ghbu::fetch_repo_ssh_urls_by_name(github_token) {
         println!("{name:40} {url}");

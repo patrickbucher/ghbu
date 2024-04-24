@@ -1,7 +1,25 @@
 use reqwest::blocking::Client;
 use serde_json::Value;
 use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
 
+/// Checks if dir exists and if it is a directory; creates the directory, if needed.
+pub fn prepare_clone_dir(dir: String) -> Result<bool, String> {
+    let path = Path::new(&dir);
+    match path.exists() {
+        true => match path.is_dir() {
+            true => Ok(true),
+            false => Err("path exists, but is not a directory".to_string()),
+        },
+        false => match fs::create_dir(path) {
+            Ok(_) => Ok(true),
+            Err(e) => Err(e.to_string()),
+        },
+    }
+}
+
+/// Calls the GitHub /user/repos endpoint and returns a HashMap of SSH URLs by repository name.
 pub fn fetch_repo_ssh_urls_by_name(github_token: String) -> HashMap<String, String> {
     let mut ssh_urls: HashMap<String, String> = HashMap::new();
     let client = Client::new();
