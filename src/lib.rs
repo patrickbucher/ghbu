@@ -5,8 +5,8 @@ use std::fs;
 use std::path::Path;
 
 /// Checks if dir exists and if it is a directory; creates the directory, if needed.
-pub fn prepare_clone_dir(dir: String) -> Result<bool, String> {
-    let path = Path::new(&dir);
+pub fn prepare_clone_dir(dir: &str) -> Result<bool, String> {
+    let path = Path::new(dir);
     match path.exists() {
         true => match path.is_dir() {
             true => Ok(true),
