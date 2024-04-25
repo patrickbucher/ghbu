@@ -1,5 +1,5 @@
 use clap::Parser;
-use git2::{Cred, Error, RemoteCallbacks, Repository};
+use git2::{Cred, RemoteCallbacks, Repository};
 use std::{env, path::Path, process};
 
 const TOKEN_ENVVAR: &str = "GITHUB_TOKEN";
@@ -49,10 +49,41 @@ fn main() {
     builder.fetch_options(options);
 
     for (name, url) in ghbu::fetch_repo_ssh_urls_by_name(github_token) {
-        let repo_path = Path::new(&args.to).join(name);
-        let repo_path_str = repo_path.display();
+        let repo_path = Path::new(&args.to).join(name.clone());
+        let repo_path_str = repo_path.clone();
+        let repo_path_str = repo_path_str.display();
+
+        let mut cbs = RemoteCallbacks::new();
+        cbs.credentials(|_, username, _| {
+            Cred::ssh_key(
+                username.unwrap(),
+                None,
+                Path::new("/home/patrick/.ssh/id_ed25519"),
+                None,
+            )
+        });
+        let mut opts = git2::FetchOptions::new();
+        opts.remote_callbacks(cbs);
+
         match repo_path.exists() {
-            true => println!("git pull {}", repo_path_str),
+            true => match Repository::open(repo_path) {
+                Ok(repo) => match repo.find_remote("origin") {
+                    Ok(mut origin) => match origin.fetch(&["master"], Some(&mut opts), None) {
+                        Ok(_) => {
+                            println!("fetched origin/master for {}", name);
+                        }
+                        Err(e) => {
+                            eprintln!("fetch origin/mater for repo {}: {}", name, e);
+                        }
+                    },
+                    Err(e) => {
+                        eprintln!("repo {} has no origin: {}", name, e);
+                    }
+                },
+                Err(e) => {
+                    eprintln!("repo {} in {} is broken: {}", name, repo_path_str, e);
+                }
+            },
             false => match builder.clone(&url, &repo_path) {
                 Ok(r) => println!(
                     "cloned {url} to {}: {}",
@@ -62,6 +93,5 @@ fn main() {
                 Err(e) => eprintln!("cloning {url} to {}: {}", repo_path_str, e),
             },
         }
-        break;
     }
 }
