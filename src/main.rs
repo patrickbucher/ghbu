@@ -68,6 +68,8 @@ fn main() {
         match repo_path.exists() {
             true => match Repository::open(repo_path) {
                 Ok(repo) => match repo.find_remote("origin") {
+                    // FIXME: don't rely on name master
+                    // FIXME: do fast forward merge
                     Ok(mut origin) => match origin.fetch(&["master"], Some(&mut opts), None) {
                         Ok(_) => {
                             println!("fetched origin/master for {}", name);
