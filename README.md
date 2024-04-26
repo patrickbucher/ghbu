@@ -2,10 +2,9 @@
 
 ## Design
 
-Intended usage (backup the repositories of accounts `foo` and `bar` to
-`~/github-backup/foo` and `~/github-backup/bar`, respectively):
+Usage (backup the repositories owned by the user with the given `GITHUB_TOKEN` to `~/github-backup`): 
 
-    $ GITHUB_TOKEN=0123456789abcdef ghbu --to ~/github-backup foo bar
+    $ GITHUB_TOKEN=0123456789abcdef ghbu --to ~/github-backup
 
 ## Dependencies
 
@@ -13,14 +12,15 @@ Intended usage (backup the repositories of accounts `foo` and `bar` to
 - [git2](https://docs.rs/git2/latest/git2/): clone and pull repositories
 - [clap](https://crates.io/crates/clap): parse command line arguments
 
-## Open Points
+## Design
 
-- How does the `git2` library deal with the SSH key?
-- What if a repository is backed up, deleted, re-created under the same name,
-  and therefore, cannot be pulled again? (Report it to the user, so that he can
-  delete the old backed up repository manually? Provide a `--force` flag to get
-  rid of the old version?)
-- Shall there be a `--dry` run option, especially for testing the API access in
-  the beginning?
-- Shall the blocking reqwest client be used in the beginning for the sake of
-  simplicity?
+- If the repository does not exist yet in the `--to` folder, clone it with as a
+  bare repository (to save space).
+    - `git clone --bare [url] [name]`
+- If the repository already exists in the `--to` folder, fetch it.
+    - `git fetch origin master:master`
+    - figure out the branch name (here: master) using the following API
+        - [get current head](https://docs.rs/git2/latest/git2/struct.Repository.html#method.head)
+        - [make sure it is a branch](https://docs.rs/git2/latest/git2/struct.Reference.html#method.is_branch)
+        - [get the branch name](https://docs.rs/git2/latest/git2/struct.Reference.html#method.name)
+
