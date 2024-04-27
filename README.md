@@ -9,15 +9,19 @@ to `~/github-backup`, access by the given SSH key):
 
 ## Dependencies
 
-- [reqwest](https://crates.io/crates/reqwest): request repositories from GitHub
-  API
-- [git2](https://docs.rs/git2/latest/git2/): clone and pull repositories
-- [clap](https://crates.io/crates/clap): parse command line arguments
+- [`git2`](https://docs.rs/git2/latest/git2/): clone and fetch Git repositories
+- [`reqwest`](https://crates.io/crates/reqwest): request repositories from GitHub API
+- [`serde_json`](https://crates.io/crates/serde_json): unmarshal GitHub API payloads
+- [`clap`](https://crates.io/crates/clap): parse command line arguments
 
-## Design
+## TODO
 
-- If the repository does not exist yet in the `--to` folder, clone it with as a
-  bare repository (to save space).
-    - `git clone --bare [url] [name]`
-- If the repository already exists in the `--to` folder, fetch it.
-    - `git fetch origin master:master`
+- [ ] Refactoring
+    - [ ] get rid of `unwrap()` calls
+    - [ ] restructure code
+- [ ] Concurrency
+    - [ ] interleave API calls with cloning/fetching of repositories
+- [ ] Extension
+    - [ ] implement for GitLab API
+    - [ ] implement for Gitea API
+    - [ ] clone an organization's repositories, too
