@@ -1,8 +1,10 @@
 [package]
 name = "ghbu"
+description = "Backup your GitHub Repositories"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+repository = "https://github.com/patrickbucher/ghbu"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
