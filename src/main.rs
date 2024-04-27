@@ -1,5 +1,6 @@
 use clap::Parser;
 use git2::{Cred, RemoteCallbacks, Repository};
+use std::collections::HashMap;
 use std::{env, path::Path, process};
 
 const TOKEN_ENVVAR: &str = "GITHUB_TOKEN";
@@ -11,9 +12,11 @@ struct Args {
     /// Output Directory
     #[arg(short, long)]
     to: String,
-}
 
-// TODO: username and SSH key file as command line arguments?
+    /// SSH Key File
+    #[arg(short, long)]
+    keyfile: String,
+}
 
 fn main() {
     let github_token = match env::vars()
@@ -28,45 +31,67 @@ fn main() {
         }
     };
     let args = Args::parse();
-    println!("clone to: {}", args.to);
-    if let Err(e) = ghbu::prepare_clone_dir(&args.to) {
-        eprintln!("{e}");
+
+    if let Err(err) = ghbu::prepare_clone_dir(&args.to) {
+        eprintln!("prepare clone directory {}: {}", args.to, err);
         process::exit(1);
     }
+
+    let all_repos = ghbu::fetch_repo_ssh_urls_by_name(github_token);
+    let (old_repos, new_repos): (HashMap<_, _>, HashMap<_, _>) =
+        all_repos.iter().partition(|(name, _)| {
+            let path = Path::new(&args.to).join(name);
+            match Repository::open_bare(path) {
+                Ok(_) => true,
+                Err(_) => false, // TODO: remove path? (broken repo)
+            }
+        });
 
     let mut callbacks = RemoteCallbacks::new();
     callbacks.credentials(|_, username, _| {
         Cred::ssh_key(
-            username.unwrap(),
+            username.unwrap(), // FIXME
             None,
-            Path::new("/home/patrick/.ssh/id_ed25519"),
-            None,
+            Path::new(&args.keyfile),
+            None, // TODO: provide passphrase as optional command line argument
         )
     });
+
     let mut options = git2::FetchOptions::new();
     options.remote_callbacks(callbacks);
+
+    for (name, _) in old_repos {
+        let abs_path = Path::new(&args.to).join(name);
+        if let Ok(repo) = Repository::open_bare(&abs_path) {
+            let head = repo.head().unwrap(); // FIXME
+            if head.is_branch() {
+                let branch_name = head.shorthand().unwrap(); // FIXME
+                let mut origin = repo.find_remote("origin").unwrap(); // FIXME
+                match origin.fetch(&[branch_name], Some(&mut options), None) {
+                    Ok(_) => eprintln!("{name}: fetched {branch_name}"),
+                    Err(err) => eprintln!("{}: fetching {}: {}", name, branch_name, err),
+                }
+            } else {
+                eprintln!("{}: head is not a branch", name);
+            }
+        } else {
+            eprintln!(
+                "{}: repo at path {} cannot be opened as bare repo",
+                name,
+                abs_path.display()
+            );
+        }
+    }
+
     let mut builder = git2::build::RepoBuilder::new();
     builder.bare(true);
     builder.fetch_options(options);
 
-    for (name, url) in ghbu::fetch_repo_ssh_urls_by_name(github_token) {
-        let repo_path = Path::new(&args.to).join(name.clone());
-        let repo_path_str = repo_path.clone();
-        let repo_path_str = repo_path_str.display();
-
-        match repo_path.exists() {
-            true => match Repository::open_bare(repo_path) {
-                Ok(repo) => {
-                    println!("TODO opened bare repo {name} at {repo_path_str}");
-                }
-                Err(e) => {
-                    eprintln!("repo {} in {} is broken: {}", name, repo_path_str, e);
-                }
-            },
-            false => match builder.clone(&url, &repo_path) {
-                Ok(r) => println!("cloned {url} to {}", repo_path_str),
-                Err(e) => eprintln!("cloning {url} to {}: {}", repo_path_str, e),
-            },
+    for (name, ssh_url) in new_repos {
+        let abs_path = Path::new(&args.to).join(name);
+        match builder.clone(&ssh_url, &abs_path) {
+            Ok(_) => eprintln!("{}: cloned to {}", name, abs_path.display()),
+            Err(err) => eprintln!("{}: cloning to {}: {}", name, abs_path.display(), err),
         }
     }
 }
