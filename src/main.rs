@@ -1,4 +1,5 @@
 use clap::Parser;
+use ghbu::LocalRepo;
 use git2::{Cred, RemoteCallbacks, Repository};
 use std::collections::HashMap;
 use std::{env, path::Path, process};
@@ -16,6 +17,10 @@ struct Args {
     /// SSH Key File
     #[arg(short, long)]
     keyfile: String,
+
+    /// Cleanup Broken Repositories
+    #[arg(short, long, default_value_t = false)]
+    cleanup: bool,
 }
 
 fn main() {
@@ -32,12 +37,31 @@ fn main() {
     };
     let args = Args::parse();
 
-    if let Err(err) = ghbu::prepare_clone_dir(&args.to) {
-        eprintln!("prepare clone directory {}: {}", args.to, err);
-        process::exit(1);
-    }
+    let path: &Path = match ghbu::prepare_clone_dir(&args.to) {
+        Ok(path) => *path,
+        Err(err) => {
+            eprintln!("prepare clone directory {}: {}", args.to, err);
+            process::exit(1);
+        }
+    };
 
     let all_repos = ghbu::fetch_repo_ssh_urls_by_name(github_token);
+    let local_repos: Vec<LocalRepo> = all_repos
+        .iter()
+        .map(|(name, ssh_url)| LocalRepo::new(name.clone(), ssh_url.clone(), path))
+        .collect();
+
+    if args.cleanup {
+        let broken_repos = local_repos
+            .iter()
+            .filter(|r| r.existing_dir() && !r.open_bare().is_ok());
+        broken_repos.for_each(|r| match r.annihilate() {
+            Ok(_) => println!("{}: removed broken repo at {}", r.name(), r.path()),
+            Err(_) => println!("{}: unable to remove broken repo at {}", r.name(), r.path()),
+        });
+    }
+
+    // TODO: refactor code from here to use `local_repos` instead of `all_repos`
     let (old_repos, new_repos): (HashMap<_, _>, HashMap<_, _>) =
         all_repos.iter().partition(|(name, _)| {
             let path = Path::new(&args.to).join(name);
