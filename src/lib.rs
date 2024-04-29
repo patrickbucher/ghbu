@@ -1,4 +1,4 @@
-use git2::{Error, Repository};
+use git2::{build::RepoBuilder, Error, FetchOptions, Repository};
 use reqwest::blocking::Client;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -22,19 +22,51 @@ impl LocalRepo {
         }
     }
 
+    /// Clones the repository from `ssh_url` to `path`.
+    pub fn clone(&self, builder: &mut RepoBuilder) -> Result<(), ()> {
+        // TODO: proper error handling
+        match builder.clone(&self.ssh_url, &self.path) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(()),
+        }
+    }
+
+    /// Fetches the repository's HEAD.
+    pub fn fetch(&self, options: &mut FetchOptions) -> Result<(), ()> {
+        // TODO: clean up the mess below
+        match self.open_bare() {
+            Ok(r) => match r.head() {
+                Ok(head) => {
+                    if !head.is_branch() {
+                        return Err(());
+                    }
+                    match head.shorthand() {
+                        Some(branch_name) => match r.find_remote("origin") {
+                            Ok(mut origin) => {
+                                match origin.fetch(&[branch_name], Some(options), None) {
+                                    Ok(_) => Ok(()),
+                                    Err(_) => Err(()),
+                                }
+                            }
+                            Err(_) => Err(()),
+                        },
+                        None => Err(()),
+                    }
+                }
+                Err(_) => Err(()),
+            },
+            Err(_) => Err(()),
+        }
+    }
+
     /// The repository's name.
     pub fn name(&self) -> &str {
         &self.name
     }
 
-    /// The repository's SSH URL.
-    pub fn ssh_url(&self) -> &str {
-        &self.ssh_url
-    }
-
     /// The repository's path.
     pub fn path(&self) -> &str {
-        &self.path.to_str().unwrap() // FIXME
+        self.path.to_str().unwrap() // FIXME
     }
 
     /// Checks whether or not the LocalRepo's path refers to an existing directory.
@@ -88,7 +120,7 @@ pub fn fetch_repo_ssh_urls_by_name(github_token: String) -> HashMap<String, Stri
         match req.send() {
             Ok(res) => {
                 if let Ok(Value::Array(arr)) = res.json::<serde_json::Value>() {
-                    if arr.len() < 1 {
+                    if arr.is_empty() {
                         break;
                     }
                     for repo in arr {
