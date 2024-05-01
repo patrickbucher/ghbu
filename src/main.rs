@@ -56,7 +56,12 @@ fn main() {
             .filter(|r| r.existing_dir() && r.open_bare().is_err());
         broken_repos.for_each(|r| match r.annihilate() {
             Ok(_) => eprintln!("{}: removed broken repo at {}", r.name(), r.path()),
-            Err(_) => eprintln!("{}: unable to remove broken repo at {}", r.name(), r.path()),
+            Err(e) => eprintln!(
+                "{}: unable to remove broken repo at {}: {}",
+                r.name(),
+                r.path(),
+                e
+            ),
         });
     }
 
@@ -80,7 +85,7 @@ fn main() {
     for repo in to_fetch {
         match repo.fetch(&mut options) {
             Ok(_) => eprintln!("{}: fetched to {}", repo.name(), repo.path()),
-            Err(_) => eprintln!("{}: fetching to {}: failed", repo.name(), repo.path()),
+            Err(e) => eprintln!("{}: fetching to {}: {}", repo.name(), repo.path(), e),
         }
     }
 
@@ -91,7 +96,7 @@ fn main() {
     for repo in to_clone {
         match repo.clone(&mut builder) {
             Ok(_) => eprintln!("{}: cloned to {}", repo.name(), repo.path()),
-            Err(_) => eprintln!("{}: cloning to {}: failed", repo.name(), repo.path()),
+            Err(e) => eprintln!("{}: cloning to {}: {}", repo.name(), repo.path(), e),
         }
     }
 }

@@ -19,7 +19,6 @@ to `~/github-backup`, access by the given SSH key):
 - [ ] Refactoring
     - [ ] get rid of `unwrap()` calls
     - [ ] restructure code
-    - [ ] improve error handling (use custom error type?)
 - [ ] Concurrency
     - [ ] interleave API calls with cloning/fetching of repositories
 - [ ] Extension

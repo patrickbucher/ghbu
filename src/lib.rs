@@ -1,4 +1,4 @@
-use git2::{build::RepoBuilder, Error, FetchOptions, Repository};
+use git2::{build::RepoBuilder, Error, ErrorClass, ErrorCode, FetchOptions, Repository};
 use reqwest::blocking::Client;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -23,40 +23,33 @@ impl LocalRepo {
     }
 
     /// Clones the repository from `ssh_url` to `path`.
-    pub fn clone(&self, builder: &mut RepoBuilder) -> Result<(), ()> {
-        // TODO: proper error handling
-        match builder.clone(&self.ssh_url, &self.path) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(()),
-        }
+    pub fn clone(&self, builder: &mut RepoBuilder) -> Result<Repository, Error> {
+        Ok(builder.clone(&self.ssh_url, &self.path)?)
     }
 
     /// Fetches the repository's HEAD.
-    pub fn fetch(&self, options: &mut FetchOptions) -> Result<(), ()> {
-        // TODO: clean up the mess below
-        match self.open_bare() {
-            Ok(r) => match r.head() {
-                Ok(head) => {
-                    if !head.is_branch() {
-                        return Err(());
-                    }
-                    match head.shorthand() {
-                        Some(branch_name) => match r.find_remote("origin") {
-                            Ok(mut origin) => {
-                                match origin.fetch(&[branch_name], Some(options), None) {
-                                    Ok(_) => Ok(()),
-                                    Err(_) => Err(()),
-                                }
-                            }
-                            Err(_) => Err(()),
-                        },
-                        None => Err(()),
-                    }
-                }
-                Err(_) => Err(()),
-            },
-            Err(_) => Err(()),
+    pub fn fetch(&self, options: &mut FetchOptions) -> Result<(), Error> {
+        let repo = self.open_bare()?;
+        let mut origin = repo.find_remote("origin")?;
+        let head = repo.head()?;
+        if !head.is_branch() {
+            return Err(Error::new(
+                ErrorCode::NotFound,
+                ErrorClass::Reference,
+                "HEAD does not refer to a branch",
+            ));
         }
+        let branch = match head.shorthand() {
+            Some(b) => b,
+            None => {
+                return Err(Error::new(
+                    ErrorCode::NotFound,
+                    ErrorClass::Reference,
+                    "unable to get branch for HEAD",
+                ))
+            }
+        };
+        Ok(origin.fetch(&[branch], Some(options), None)?)
     }
 
     /// The repository's name.
@@ -81,6 +74,7 @@ impl LocalRepo {
 
     /// Deletes the LocalRepo's path recursively.
     pub fn annihilate(&self) -> io::Result<()> {
+        // TODO: proper error handling
         fs::remove_dir_all(&self.path)
     }
 }
