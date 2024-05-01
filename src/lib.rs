@@ -24,7 +24,7 @@ impl LocalRepo {
 
     /// Clones the repository from `ssh_url` to `path`.
     pub fn clone(&self, builder: &mut RepoBuilder) -> Result<Repository, Error> {
-        Ok(builder.clone(&self.ssh_url, &self.path)?)
+        builder.clone(&self.ssh_url, &self.path)
     }
 
     /// Fetches the repository's HEAD.
@@ -49,7 +49,7 @@ impl LocalRepo {
                 ))
             }
         };
-        Ok(origin.fetch(&[branch], Some(options), None)?)
+        origin.fetch(&[branch], Some(options), None)
     }
 
     /// The repository's name.
