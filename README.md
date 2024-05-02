@@ -16,9 +16,6 @@ to `~/github-backup`, access by the given SSH key):
 
 ## TODO
 
-- [ ] Refactoring
-    - [ ] get rid of `unwrap()` calls
-    - [ ] restructure code
 - [ ] Concurrency
     - [ ] interleave API calls with cloning/fetching of repositories
 - [ ] Extension

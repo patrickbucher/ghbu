@@ -1,8 +1,9 @@
-use git2::{build::RepoBuilder, Error, ErrorClass, ErrorCode, FetchOptions, Repository};
+use git2::build::RepoBuilder;
+use git2::{Cred, Error, ErrorClass, ErrorCode, FetchOptions, RemoteCallbacks, Repository};
 use reqwest::blocking::Client;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::{fs, io, path::Path};
+use std::{fs, io, path::Display, path::Path};
 
 /// LocalRepo is a Git repository with a local path.
 pub struct LocalRepo {
@@ -58,8 +59,8 @@ impl LocalRepo {
     }
 
     /// The repository's path.
-    pub fn path(&self) -> &str {
-        self.path.to_str().unwrap() // FIXME
+    pub fn display_path(&self) -> Display {
+        self.path.display()
     }
 
     /// Checks whether or not the LocalRepo's path refers to an existing directory.
@@ -74,9 +75,24 @@ impl LocalRepo {
 
     /// Deletes the LocalRepo's path recursively.
     pub fn annihilate(&self) -> io::Result<()> {
-        // TODO: proper error handling
         fs::remove_dir_all(&self.path)
     }
+}
+
+/// Creates the callbacks using SSH credentials.
+pub fn create_callbacks(keyfile: &Path) -> RemoteCallbacks {
+    let mut callbacks = RemoteCallbacks::new();
+    callbacks.credentials(|url, username, _| {
+        match username {
+            Some(u) => Cred::ssh_key(u, None, keyfile, None /* TODO: provide passphrase */),
+            None => Err(Error::new(
+                ErrorCode::User,
+                ErrorClass::Invalid,
+                format!("cannot determine username from URL {url}"),
+            )),
+        }
+    });
+    callbacks
 }
 
 /// Checks if dir exists and if it is a directory; creates the directory, if needed.

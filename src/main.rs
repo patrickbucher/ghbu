@@ -1,6 +1,6 @@
 use clap::Parser;
-use ghbu::LocalRepo;
-use git2::{Cred, RemoteCallbacks};
+use ghbu::{create_callbacks, LocalRepo};
+use git2::{build::RepoBuilder, FetchOptions};
 use std::{env, path::Path, process};
 
 const TOKEN_ENVVAR: &str = "GITHUB_TOKEN";
@@ -55,11 +55,11 @@ fn main() {
             .iter()
             .filter(|r| r.existing_dir() && r.open_bare().is_err());
         broken_repos.for_each(|r| match r.annihilate() {
-            Ok(_) => eprintln!("{}: removed broken repo at {}", r.name(), r.path()),
+            Ok(_) => println!("{}: removed broken repo at {}", r.name(), r.display_path()),
             Err(e) => eprintln!(
                 "{}: unable to remove broken repo at {}: {}",
                 r.name(),
-                r.path(),
+                r.display_path(),
                 e
             ),
         });
@@ -69,34 +69,30 @@ fn main() {
         .iter()
         .partition(|r| r.existing_dir() && r.open_bare().is_ok());
 
-    let mut callbacks = RemoteCallbacks::new();
-    callbacks.credentials(|_, username, _| {
-        Cred::ssh_key(
-            username.unwrap(), // FIXME
-            None,
-            Path::new(&args.keyfile),
-            None, // TODO: provide passphrase as optional command line argument
-        )
-    });
-
-    let mut options = git2::FetchOptions::new();
+    let callbacks = create_callbacks(Path::new(&args.keyfile));
+    let mut options = FetchOptions::new();
     options.remote_callbacks(callbacks);
 
     for repo in to_fetch {
         match repo.fetch(&mut options) {
-            Ok(_) => eprintln!("{}: fetched to {}", repo.name(), repo.path()),
-            Err(e) => eprintln!("{}: fetching to {}: {}", repo.name(), repo.path(), e),
+            Ok(_) => println!("{}: fetched to {}", repo.name(), repo.display_path()),
+            Err(e) => eprintln!(
+                "{}: fetching to {}: {}",
+                repo.name(),
+                repo.display_path(),
+                e
+            ),
         }
     }
 
-    let mut builder = git2::build::RepoBuilder::new();
+    let mut builder = RepoBuilder::new();
     builder.bare(true);
     builder.fetch_options(options);
 
     for repo in to_clone {
         match repo.clone(&mut builder) {
-            Ok(_) => eprintln!("{}: cloned to {}", repo.name(), repo.path()),
-            Err(e) => eprintln!("{}: cloning to {}: {}", repo.name(), repo.path(), e),
+            Ok(_) => println!("{}: cloned to {}", repo.name(), repo.display_path()),
+            Err(e) => eprintln!("{}: cloning to {}: {}", repo.name(), repo.display_path(), e),
         }
     }
 }
