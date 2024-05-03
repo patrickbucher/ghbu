@@ -1,11 +1,14 @@
 # `ghbu`: GitHub Backup
 
-## Design
+## Usage
 
-Usage (backup the repositories owned by the user with the given `GITHUB_TOKEN`
-to `~/github-backup`, access by the given SSH key): 
+Backup the repositories owned by user `joe`:
 
-    $ GITHUB_TOKEN=0123abc ghbu --to ~/github-backup --keyfile ~/.ssh/id_ed25519
+    $ GITHUB_TOKEN=0123abc ghbu --to ~/github-backup --keyfile ~/.ssh/id_ed25519 --user joe
+
+Backup the repositories owned by organization `acme`:
+
+    $ GITHUB_TOKEN=0123abc ghbu --to ~/github-backup --keyfile ~/.ssh/id_ed25519 --org acme
 
 ## Dependencies
 
@@ -21,10 +24,3 @@ to `~/github-backup`, access by the given SSH key):
 - [ ] Extension
     - [ ] implement for GitLab API
     - [ ] implement for Gitea API
-    - [ ] Backup an Organization's Repositories
-        - `GET /orgs/{org}/repos` ([API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#list-organization-repositories))
-        - if `--org ORG` is present, backup organization to `TO/ORG`
-        - otherwise, backup private repos to `TO/USERNAME`
-            - need to pre-fetch username by token?
-            - or indicate with `--user USER` explicitly?
-            - `--user` and `--org` as mutually exclusive CLI paramters

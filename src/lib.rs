@@ -5,6 +5,13 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::{fs, io, path::Display, path::Path};
 
+/// Scope determines if the user's or an organization's repositories are backed up.
+pub struct Scope {
+    pub name: String,
+    pub endpoint: String,
+    pub query: (String, String),
+}
+
 /// LocalRepo is a Git repository with a local path.
 pub struct LocalRepo {
     name: String,
@@ -96,36 +103,35 @@ pub fn create_callbacks(keyfile: &Path) -> RemoteCallbacks {
 }
 
 /// Checks if dir exists and if it is a directory; creates the directory, if needed.
-pub fn prepare_clone_dir(dir: &str) -> Result<Box<&Path>, String> {
-    let path = Path::new(dir);
+pub fn prepare_clone_dir(path: &Path) -> Result<Box<&Path>, String> {
     match path.exists() {
         true => match path.is_dir() {
             true => Ok(Box::new(path)),
-            false => Err("path exists, but is not a directory".to_string()),
+            false => Err("path exists, but is not a directory".into()),
         },
-        false => match fs::create_dir(path) {
+        false => match fs::create_dir_all(path) {
             Ok(_) => Ok(Box::new(path)),
             Err(e) => Err(e.to_string()),
         },
     }
 }
 
-/// Calls the GitHub /user/repos endpoint and returns a HashMap of SSH URLs by repository name.
-pub fn fetch_repo_ssh_urls_by_name(github_token: String) -> HashMap<String, String> {
+/// Calls the GitHub endpoint for the scope and returns a HashMap of SSH URLs by repository name.
+pub fn fetch_repo_ssh_urls_by_name(github_token: String, scope: Scope) -> HashMap<String, String> {
     let mut ssh_urls: HashMap<String, String> = HashMap::new();
     let client = Client::new();
-    let url = "https://api.github.com/user/repos";
+    let url = format!("https://api.github.com/{}", scope.endpoint);
     let mut page = 1;
     loop {
         let req = client
-            .get(url)
+            .get(url.clone())
             .bearer_auth(&github_token)
             .header("Accept", "application/json")
             .header("User-Agent", "reqwest")
             .query(&[
-                ("affiliation", "owner"),
                 ("per_page", "20"),
                 ("page", &page.to_string()),
+                (&scope.query.0, &scope.query.1),
             ]);
         match req.send() {
             Ok(res) => {
@@ -136,7 +142,7 @@ pub fn fetch_repo_ssh_urls_by_name(github_token: String) -> HashMap<String, Stri
                     for repo in arr {
                         match (repo.get("name"), repo.get("ssh_url")) {
                             (Some(Value::String(name)), Some(Value::String(ssh_url))) => {
-                                ssh_urls.insert(name.to_string(), ssh_url.to_string());
+                                ssh_urls.insert(name.into(), ssh_url.into());
                             }
                             _ => eprintln!("skipping repo (missing name/ssh_url)"),
                         }

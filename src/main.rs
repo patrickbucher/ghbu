@@ -1,7 +1,7 @@
 use clap::Parser;
-use ghbu::{create_callbacks, LocalRepo};
+use ghbu::{create_callbacks, LocalRepo, Scope};
 use git2::{build::RepoBuilder, FetchOptions};
-use std::{env, path::Path, process};
+use std::{env, path::Path, path::PathBuf, process};
 
 const TOKEN_ENVVAR: &str = "GITHUB_TOKEN";
 
@@ -9,6 +9,14 @@ const TOKEN_ENVVAR: &str = "GITHUB_TOKEN";
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Args {
+    /// User
+    #[arg(short, long)]
+    user: Option<String>,
+
+    /// Organization
+    #[arg(short, long)]
+    org: Option<String>,
+
     /// Output Directory
     #[arg(short, long)]
     to: String,
@@ -23,6 +31,28 @@ struct Args {
 }
 
 fn main() {
+    let args = Args::parse();
+
+    let scope: Scope = if args.user.is_some() && args.org.is_some() {
+        eprintln!("provide either user or org, but not both");
+        process::exit(1);
+    } else if let Some(name) = args.user {
+        Scope {
+            name: name.clone(),
+            endpoint: "user/repos".into(),
+            query: ("affiliation".into(), "owner".into()),
+        }
+    } else if let Some(name) = args.org {
+        Scope {
+            name: name.clone(),
+            endpoint: format!("orgs/{}/repos", name.clone()),
+            query: ("type".into(), "all".into()),
+        }
+    } else {
+        eprintln!("provide either user or org, but not neither");
+        process::exit(1);
+    };
+
     let github_token = match env::vars()
         .filter(|(k, _)| k == TOKEN_ENVVAR)
         .map(|(_, v)| v)
@@ -34,9 +64,9 @@ fn main() {
             process::exit(1);
         }
     };
-    let args = Args::parse();
 
-    let path: &Path = match ghbu::prepare_clone_dir(&args.to) {
+    let to: PathBuf = [&args.to, &scope.name].iter().collect();
+    let path: &Path = match ghbu::prepare_clone_dir(to.as_path()) {
         Ok(path) => *path,
         Err(err) => {
             eprintln!("prepare clone directory {}: {}", args.to, err);
@@ -44,7 +74,7 @@ fn main() {
         }
     };
 
-    let all_repos = ghbu::fetch_repo_ssh_urls_by_name(github_token);
+    let all_repos = ghbu::fetch_repo_ssh_urls_by_name(github_token, scope);
     let local_repos: Vec<LocalRepo> = all_repos
         .iter()
         .map(|(name, ssh_url)| LocalRepo::new(name.clone(), ssh_url.clone(), path))
