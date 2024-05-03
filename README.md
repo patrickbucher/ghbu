@@ -22,7 +22,7 @@ to `~/github-backup`, access by the given SSH key):
     - [ ] implement for GitLab API
     - [ ] implement for Gitea API
     - [ ] Backup an Organization's Repositories
-        - `GET /orgs/{org}/repos`
+        - `GET /orgs/{org}/repos` ([API](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#list-organization-repositories))
         - if `--org ORG` is present, backup organization to `TO/ORG`
         - otherwise, backup private repos to `TO/USERNAME`
             - need to pre-fetch username by token?
