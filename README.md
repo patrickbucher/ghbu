@@ -21,4 +21,10 @@ to `~/github-backup`, access by the given SSH key):
 - [ ] Extension
     - [ ] implement for GitLab API
     - [ ] implement for Gitea API
-    - [ ] clone an organization's repositories, too
+    - [ ] Backup an Organization's Repositories
+        - `GET /orgs/{org}/repos`
+        - if `--org ORG` is present, backup organization to `TO/ORG`
+        - otherwise, backup private repos to `TO/USERNAME`
+            - need to pre-fetch username by token?
+            - or indicate with `--user USER` explicitly?
+            - `--user` and `--org` as mutually exclusive CLI paramters
