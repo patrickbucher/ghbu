@@ -24,3 +24,7 @@ Backup the repositories owned by organization `acme`:
 - [ ] Extension
     - [ ] implement for GitLab API
     - [ ] implement for Gitea API
+    - [ ] consider supporting HTTPS credentials
+    - [ ] consider supporting SSH Key from Agent
+    - [ ] add support for SSH Passphrase (as environment variable)
+    - [ ] consider measuring timing and/or displaying progress
