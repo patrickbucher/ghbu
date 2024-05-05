@@ -5,6 +5,8 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::{fs, io, path::Display, path::Path};
 
+const API_BASE_URL: &str = "https://api.github.com";
+
 /// Scope determines if the user's or an organization's repositories are backed up.
 pub struct Scope {
     pub name: String,
@@ -120,7 +122,7 @@ pub fn prepare_clone_dir(path: &Path) -> Result<Box<&Path>, String> {
 pub fn fetch_repo_ssh_urls_by_name(github_token: String, scope: Scope) -> HashMap<String, String> {
     let mut ssh_urls: HashMap<String, String> = HashMap::new();
     let client = Client::new();
-    let url = format!("https://api.github.com/{}", scope.endpoint);
+    let url = format!("{API_BASE_URL}/{}", scope.endpoint);
     let mut page = 1;
     loop {
         let req = client
