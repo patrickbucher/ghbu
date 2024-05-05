@@ -1,7 +1,7 @@
 use clap::Parser;
 use ghbu::{create_callbacks, LocalRepo, Scope};
 use git2::{build::RepoBuilder, FetchOptions};
-use std::{env, path::Path, path::PathBuf, process};
+use std::{env, path::Path, path::PathBuf, process, time::Duration};
 
 const TOKEN_ENVVAR: &str = "GITHUB_TOKEN";
 
@@ -105,7 +105,12 @@ fn main() {
 
     for repo in to_fetch {
         match repo.fetch(&mut options) {
-            Ok(_) => println!("{}: fetched to {}", repo.name(), repo.display_path()),
+            Ok(d) => println!(
+                "{}: fetched to {} in {}",
+                repo.name(),
+                repo.display_path(),
+                format_secs(d)
+            ),
             Err(e) => eprintln!(
                 "{}: fetching to {}: {}",
                 repo.name(),
@@ -121,8 +126,19 @@ fn main() {
 
     for repo in to_clone {
         match repo.clone(&mut builder) {
-            Ok(_) => println!("{}: cloned to {}", repo.name(), repo.display_path()),
+            Ok(d) => println!(
+                "{}: cloned to {} in {}",
+                repo.name(),
+                repo.display_path(),
+                format_secs(d)
+            ),
             Err(e) => eprintln!("{}: cloning to {}: {}", repo.name(), repo.display_path(), e),
         }
     }
+}
+
+fn format_secs(d: Duration) -> String {
+    let millis: u128 = d.as_millis().into();
+    let (seconds, millis) = (millis / 1000, millis % 1000);
+    format!("{seconds}.{millis}s")
 }

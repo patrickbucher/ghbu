@@ -3,7 +3,7 @@ use git2::{Cred, Error, ErrorClass, ErrorCode, FetchOptions, RemoteCallbacks, Re
 use reqwest::blocking::Client;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::{fs, io, path::Display, path::Path};
+use std::{fs, io, path::Display, path::Path, time::Duration, time::Instant};
 
 const API_BASE_URL: &str = "https://api.github.com";
 
@@ -32,13 +32,16 @@ impl LocalRepo {
         }
     }
 
-    /// Clones the repository from `ssh_url` to `path`.
-    pub fn clone(&self, builder: &mut RepoBuilder) -> Result<Repository, Error> {
-        builder.clone(&self.ssh_url, &self.path)
+    /// Clones the repository from `ssh_url` to `path` and returns the time this took.
+    pub fn clone(&self, builder: &mut RepoBuilder) -> Result<Duration, Error> {
+        let start = Instant::now();
+        builder.clone(&self.ssh_url, &self.path)?;
+        Result::Ok(start.elapsed())
     }
 
-    /// Fetches the repository's HEAD.
-    pub fn fetch(&self, options: &mut FetchOptions) -> Result<(), Error> {
+    /// Fetches the repository's HEAD and returns the time this took.
+    pub fn fetch(&self, options: &mut FetchOptions) -> Result<Duration, Error> {
+        let start = Instant::now();
         let repo = self.open_bare()?;
         let mut origin = repo.find_remote("origin")?;
         let head = repo.head()?;
@@ -59,7 +62,8 @@ impl LocalRepo {
                 ))
             }
         };
-        origin.fetch(&[branch], Some(options), None)
+        origin.fetch(&[branch], Some(options), None)?;
+        Result::Ok(start.elapsed())
     }
 
     /// The repository's name.

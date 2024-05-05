@@ -27,4 +27,3 @@ Backup the repositories owned by organization `acme`:
     - [ ] consider supporting HTTPS credentials
     - [ ] consider supporting SSH Key from Agent
     - [ ] add support for SSH Passphrase (as environment variable)
-    - [ ] consider measuring timing and/or displaying progress
