@@ -1,7 +1,7 @@
 [package]
 name = "ghbu"
 description = "Backup your GitHub Repositories"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/patrickbucher/ghbu"
@@ -9,6 +9,7 @@ repository = "https://github.com/patrickbucher/ghbu"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+akshually = "0.2.3"
 clap = { version = "4.5.4", features = ["derive"] }
 git2 = "0.18.3"
 reqwest = { version = "0.12.4", features = ["blocking", "json"] }

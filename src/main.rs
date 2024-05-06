@@ -1,7 +1,8 @@
+use akshually::date::format;
 use clap::Parser;
 use ghbu::{create_callbacks, LocalRepo, Scope};
 use git2::{build::RepoBuilder, FetchOptions};
-use std::{env, path::Path, path::PathBuf, process, time::Duration};
+use std::{env, io::Write, path::Path, path::PathBuf, process};
 
 const TOKEN_ENVVAR: &str = "GITHUB_TOKEN";
 
@@ -104,19 +105,11 @@ fn main() {
     options.remote_callbacks(callbacks);
 
     for repo in to_fetch {
+        print!("fetching {} to {}", repo.name(), repo.display_path());
+        let _ = std::io::stdout().flush();
         match repo.fetch(&mut options) {
-            Ok(d) => println!(
-                "{}: fetched to {} in {}",
-                repo.name(),
-                repo.display_path(),
-                format_secs(d)
-            ),
-            Err(e) => eprintln!(
-                "{}: fetching to {}: {}",
-                repo.name(),
-                repo.display_path(),
-                e
-            ),
+            Ok(d) => println!(", finished after {}", format(d)),
+            Err(e) => println!(", failed of {}", e),
         }
     }
 
@@ -125,20 +118,11 @@ fn main() {
     builder.fetch_options(options);
 
     for repo in to_clone {
+        print!("cloning {} to {}", repo.name(), repo.display_path());
+        let _ = std::io::stdout().flush();
         match repo.clone(&mut builder) {
-            Ok(d) => println!(
-                "{}: cloned to {} in {}",
-                repo.name(),
-                repo.display_path(),
-                format_secs(d)
-            ),
-            Err(e) => eprintln!("{}: cloning to {}: {}", repo.name(), repo.display_path(), e),
+            Ok(d) => println!(", finished after {}", format(d)),
+            Err(e) => println!(", failed of {}", e),
         }
     }
-}
-
-fn format_secs(d: Duration) -> String {
-    let millis: u128 = d.as_millis().into();
-    let (seconds, millis) = (millis / 1000, millis % 1000);
-    format!("{seconds}.{millis}s")
 }
